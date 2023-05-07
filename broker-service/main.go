@@ -1,6 +1,7 @@
 package main
 
 import (
+	"broker/controllers"
 	"broker/database"
 	"log"
 
@@ -26,5 +27,6 @@ func connectToDabase() {
 
 func startServer() {
 	r := gin.Default()
+	r.GET("/ping", controllers.Ping)
 	r.Run(":3000")
 }
