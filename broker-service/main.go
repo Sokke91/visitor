@@ -3,6 +3,7 @@ package main
 import (
 	"broker/controllers"
 	"broker/database"
+	"fmt"
 	"log"
 
 	"github.com/gin-gonic/gin"
@@ -12,6 +13,7 @@ import (
 func main() {
 	loadEnv()
 	connectToDabase()
+	startServer()
 }
 
 func loadEnv() {
@@ -26,7 +28,8 @@ func connectToDabase() {
 }
 
 func startServer() {
+	fmt.Println("Starte Broker on Port 3000")
 	r := gin.Default()
-	r.GET("/ping", controllers.Ping)
+	r.POST("/login", controllers.Login)
 	r.Run(":3000")
 }
