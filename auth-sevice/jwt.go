@@ -5,11 +5,9 @@ import (
 	"auth/models"
 	"errors"
 	"fmt"
-	"net/http"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
-	"github.com/gin-gonic/gin"
 )
 
 var secret = []byte("hkjsdhdhkurhakjsadjsurhksyrherh")
@@ -19,7 +17,7 @@ type Claims struct {
 	jwt.StandardClaims
 }
 
-func GenerateToken(personalNumber string, ctx *gin.Context) string {
+func GenerateToken(personalNumber string) (string, error) {
 	expirationTime := time.Now().Add(24 * time.Hour)
 	claims := &Claims{
 		PersonalNumber: personalNumber,
@@ -30,14 +28,13 @@ func GenerateToken(personalNumber string, ctx *gin.Context) string {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	tokenString, err := token.SignedString(secret)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Could not generate Token"})
-		return ""
+		return "", err
 	}
-	return tokenString
+	return tokenString, nil
 }
 
-func ValidateToken(c *gin.Context) error {
-	token, err := getToken(c)
+func ValidateToken(tokenString string) error {
+	token, err := getToken(tokenString)
 	if err != nil {
 		return err
 	}
@@ -48,12 +45,12 @@ func ValidateToken(c *gin.Context) error {
 	return nil
 }
 
-func CurrentUser(c *gin.Context) (models.Admin, error) {
-	err := ValidateToken(c)
+func CurrentUser(tokenString string) (models.Admin, error) {
+	err := ValidateToken(tokenString)
 	if err != nil {
 		return models.Admin{}, err
 	}
-	token, _ := getToken(c)
+	token, _ := getToken(tokenString)
 	claims, _ := token.Claims.(*Claims)
 
 	var admin models.Admin
@@ -64,9 +61,7 @@ func CurrentUser(c *gin.Context) (models.Admin, error) {
 	return admin, nil
 }
 
-func getToken(ctx *gin.Context) (*jwt.Token, error) {
-	tokenString := getTokenFromRequest(ctx)
-
+func getToken(tokenString string) (*jwt.Token, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
@@ -74,13 +69,4 @@ func getToken(ctx *gin.Context) (*jwt.Token, error) {
 		return secret, nil
 	})
 	return token, err
-}
-
-func getTokenFromRequest(ctx *gin.Context) string {
-	authHeader := ctx.GetHeader("Authorization")
-	if authHeader == "" {
-		return ""
-	}
-	tokenString := authHeader[7:] // Remove the "Bearer " prefix
-	return tokenString
 }

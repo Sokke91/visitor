@@ -8,8 +8,8 @@ import (
 )
 
 type Credentials struct {
-	Username string
-	Password string
+	PersonalNumber string
+	Password       string
 }
 
 func Login(ctx *gin.Context) {
@@ -18,12 +18,14 @@ func Login(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err})
 		return
 	}
-	var response string
-	credentials := Credentials{
-		Username: "di32655",
-		Password: "geheim",
+	var input Credentials
+	err = ctx.ShouldBindJSON(&input)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err})
+		return
 	}
-	err = client.Call("RpcServer.Login", credentials, &response)
+	var response string
+	err = client.Call("RpcServer.Login", input, &response)
 
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err})
