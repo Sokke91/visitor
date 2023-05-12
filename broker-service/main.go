@@ -13,6 +13,7 @@ import (
 func main() {
 	loadEnv()
 	connectToDabase()
+	database.ConnectToRabbitMQ()
 	startServer()
 }
 
@@ -31,5 +32,6 @@ func startServer() {
 	fmt.Println("Starte Broker on Port 3000")
 	r := gin.Default()
 	r.POST("/login", controllers.Login)
+	r.POST("/visitor", controllers.CreateVisitor)
 	r.Run(":3000")
 }
