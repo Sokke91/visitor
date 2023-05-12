@@ -1,11 +1,8 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
-	"log"
-	"net/http"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
@@ -41,6 +38,20 @@ type Payload struct {
 	Name string `json:"name"`
 	Data string `json:"data"`
 }
+type LogPayload struct {
+	Name string `json:"name"`
+	Data string `json:"data"`
+}
+
+type MailPayload struct {
+	Name string `json:"name"`
+	Data string `json:"data"`
+}
+
+type CardPayload struct {
+	Name string `json:"name"`
+	Data string `json:"data"`
+}
 
 func (consumer *Consumer) Listen(topics []string) error {
 	ch, err := consumer.conn.Channel()
@@ -72,10 +83,24 @@ func (consumer *Consumer) Listen(topics []string) error {
 	forever := make(chan bool)
 	go func() {
 		for d := range messages {
-			var payload Payload
-			_ = json.Unmarshal(d.Body, &payload)
-
-			go handlePayload(payload)
+			fmt.Println(d.RoutingKey)
+			switch d.RoutingKey {
+			case "job.MAIL":
+				var payload MailPayload
+				_ = json.Unmarshal(d.Body, &payload)
+				go handleMailJob(payload)
+				break
+			case "job.LOG":
+				var payload LogPayload
+				_ = json.Unmarshal(d.Body, &payload)
+				go handleLoggingJob(payload)
+				break
+			case "job.ID":
+				var payload CardPayload
+				_ = json.Unmarshal(d.Body, &payload)
+				go handleCreateVisitorIdJob(payload)
+				break
+			}
 		}
 	}()
 
@@ -85,52 +110,19 @@ func (consumer *Consumer) Listen(topics []string) error {
 	return nil
 }
 
-func handlePayload(payload Payload) {
-	fmt.Println(payload.Name)
-	switch payload.Name {
-	case "log", "event":
-		// log whatever we get
-		err := logEvent(payload)
-		if err != nil {
-			log.Println(err)
-		}
+func handleMailJob(payload MailPayload) {
+	fmt.Println("Call Mail Service")
+}
 
-	case "auth":
-		// authenticate
+func handleCreateVisitorIdJob(payload CardPayload) {
+	fmt.Println("Call Creade VisitorId Service")
+}
 
-	// you can have as many cases as you want, as long as you write the logic
-
-	default:
-		err := logEvent(payload)
-		if err != nil {
-			log.Println(err)
-		}
-	}
+func handleLoggingJob(payload LogPayload) {
+	fmt.Println("Call Log Service")
 }
 
 func logEvent(entry Payload) error {
-	jsonData, _ := json.MarshalIndent(entry, "", "\t")
-
-	logServiceURL := "http://logger-service/log"
-
-	request, err := http.NewRequest("POST", logServiceURL, bytes.NewBuffer(jsonData))
-	if err != nil {
-		return err
-	}
-
-	request.Header.Set("Content-Type", "application/json")
-
-	client := &http.Client{}
-
-	response, err := client.Do(request)
-	if err != nil {
-		return err
-	}
-	defer response.Body.Close()
-
-	if response.StatusCode != http.StatusAccepted {
-		return err
-	}
-
+	fmt.Println("Log event")
 	return nil
 }

@@ -22,7 +22,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	err = consumer.Listen([]string{"log", "mail", "card"})
+	err = consumer.Listen([]string{"job.LOG", "job.MAIL", "job.ID"})
 	if err != nil {
 		log.Println(err)
 	}
