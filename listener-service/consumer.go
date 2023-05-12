@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"net/rpc"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
@@ -39,8 +40,7 @@ type Payload struct {
 	Data string `json:"data"`
 }
 type LogPayload struct {
-	Name string `json:"name"`
-	Data string `json:"data"`
+	Entry string `json:"entry"`
 }
 
 type MailPayload struct {
@@ -89,17 +89,14 @@ func (consumer *Consumer) Listen(topics []string) error {
 				var payload MailPayload
 				_ = json.Unmarshal(d.Body, &payload)
 				go handleMailJob(payload)
-				break
 			case "job.LOG":
 				var payload LogPayload
 				_ = json.Unmarshal(d.Body, &payload)
 				go handleLoggingJob(payload)
-				break
 			case "job.ID":
 				var payload CardPayload
 				_ = json.Unmarshal(d.Body, &payload)
 				go handleCreateVisitorIdJob(payload)
-				break
 			}
 		}
 	}()
@@ -120,6 +117,16 @@ func handleCreateVisitorIdJob(payload CardPayload) {
 
 func handleLoggingJob(payload LogPayload) {
 	fmt.Println("Call Log Service")
+	client, err := rpc.Dial("tcp", "localhost:50004")
+	if err != nil {
+		fmt.Println(err)
+	}
+	var response *string
+	err = client.Call("RpcServer.LogEntry", payload, &response)
+	if err != nil {
+		fmt.Println(err)
+	}
+	fmt.Println(response)
 }
 
 func logEvent(entry Payload) error {
